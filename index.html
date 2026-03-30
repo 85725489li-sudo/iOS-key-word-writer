@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASO Metadata Generator</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f0f2f5; color: #1a1a2e; min-height: 100vh; }
+header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 18px 28px; display: flex; align-items: center; gap: 12px; }
+header h1 { font-size: 19px; font-weight: 700; }
+header span { font-size: 12px; opacity: 0.8; }
+.container { max-width: 1120px; margin: 0 auto; padding: 20px 16px; display: grid; grid-template-columns: 360px 1fr; gap: 18px; }
+.panel { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+.panel h2 { font-size: 12px; font-weight: 700; color: #667eea; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 14px; }
+label { display: block; font-size: 12px; font-weight: 600; color: #555; margin-bottom: 4px; margin-top: 12px; }
+label:first-of-type { margin-top: 0; }
+input[type=text], input[type=password], textarea, select {
+  width: 100%; padding: 8px 11px; border: 1.5px solid #e0e0e0; border-radius: 8px;
+  font-size: 13px; font-family: inherit; transition: border 0.2s; outline: none; background: #fafafa;
+}
+input:focus, textarea:focus, select:focus { border-color: #667eea; background: white; }
+textarea { resize: vertical; min-height: 68px; }
+
+/* Model selector tabs */
+.model-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.model-tab { padding: 6px 12px; border: 1.5px solid #e0e0e0; border-radius: 20px; background: white; cursor: pointer; font-size: 12px; font-weight: 600; color: #888; transition: all 0.15s; white-space: nowrap; }
+.model-tab.active { border-color: #667eea; background: #f0f0ff; color: #667eea; }
+.model-tab:hover:not(.active) { border-color: #bbb; color: #555; }
+
+.model-detail { background: #f8f9ff; border-radius: 8px; padding: 12px; }
+.model-detail label { margin-top: 8px; }
+.model-detail label:first-of-type { margin-top: 0; }
+
+.key-row { display: flex; gap: 6px; align-items: center; }
+.key-row input { flex: 1; }
+.icon-btn { padding: 8px 10px; border: 1.5px solid #e0e0e0; border-radius: 8px; background: white; cursor: pointer; font-size: 12px; color: #666; }
+
+.market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; }
+.market-btn { padding: 8px 6px; border: 2px solid #e0e0e0; border-radius: 8px; background: white; cursor: pointer; font-size: 12px; font-weight: 600; color: #888; transition: all 0.15s; text-align: center; }
+.market-btn.active { border-color: #667eea; background: #f0f0ff; color: #667eea; }
+.market-btn .flag { font-size: 16px; display: block; margin-bottom: 2px; }
+
+.generate-btn { width: 100%; margin-top: 16px; padding: 12px; background: linear-gradient(135deg, #667eea, #764ba2); color: white; border: none; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+.generate-btn:hover { opacity: 0.9; }
+.generate-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Output */
+.output-area { display: flex; flex-direction: column; gap: 14px; }
+.output-placeholder { display: flex; align-items: center; justify-content: center; height: 180px; color: #bbb; font-size: 13px; border: 2px dashed #e8e8e8; border-radius: 12px; }
+.market-card { border-radius: 12px; border: 1.5px solid #e8e8e8; overflow: hidden; }
+.market-card-header { padding: 11px 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 700; font-size: 13px; }
+.market-card-body { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.field-row { background: #f8f9ff; border-radius: 8px; padding: 11px 13px; }
+.field-label { font-size: 11px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+.field-value { font-size: 13px; color: #1a1a2e; line-height: 1.5; word-break: break-all; }
+.char-badge { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 20px; }
+.char-ok { background: #e6f9ee; color: #22a45d; }
+.char-warn { background: #fff3e0; color: #e6820a; }
+.char-over { background: #fde8e8; color: #d93025; }
+.copy-btn { margin-top: 5px; padding: 3px 9px; border: 1px solid #d0d0d0; border-radius: 6px; background: white; font-size: 11px; cursor: pointer; color: #555; }
+.copy-btn:hover { border-color: #667eea; color: #667eea; }
+.export-bar { display: flex; gap: 8px; justify-content: flex-end; }
+.export-btn { padding: 7px 14px; border: 1.5px solid #667eea; border-radius: 8px; background: white; color: #667eea; font-size: 12px; font-weight: 600; cursor: pointer; }
+.export-btn:hover { background: #667eea; color: white; }
+.loading { display: flex; align-items: center; gap: 10px; padding: 20px; color: #667eea; font-size: 13px; }
+.spinner { width: 18px; height: 18px; border: 3px solid #e0e0ff; border-top-color: #667eea; border-radius: 50%; animation: spin 0.8s linear infinite; flex-shrink: 0; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.error-msg { background: #fde8e8; color: #d93025; border-radius: 8px; padding: 11px 14px; font-size: 12px; }
+.model-tag { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: #e8f0fe; color: #1967d2; }
+.market-US .market-card-header { background: #e8f0fe; color: #1967d2; }
+.market-CN .market-card-header { background: #fce8e8; color: #d93025; }
+.market-JP .market-card-header { background: #fff3e0; color: #e37400; }
+.market-KR .market-card-header { background: #e6f4ea; color: #1e8e3e; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🎯 ASO Metadata Generator</h1>
+    <span>App Store · Multi-Model · Multi-Market</span>
+  </div>
+</header>
+
+<div class="container">
+  <div style="display:flex;flex-direction:column;gap:14px;">
+
+    <!-- Model & Key -->
+    <div class="panel">
+      <h2>🤖 模型 & API Key</h2>
+      <div class="model-tabs" id="modelTabs">
+        <button class="model-tab active" data-provider="claude" onclick="switchProvider(this)">Claude</button>
+        <button class="model-tab" data-provider="openai" onclick="switchProvider(this)">GPT-4</button>
+        <button class="model-tab" data-provider="deepseek" onclick="switchProvider(this)">DeepSeek</button>
+        <button class="model-tab" data-provider="gemini" onclick="switchProvider(this)">Gemini</button>
+        <button class="model-tab" data-provider="kimi" onclick="switchProvider(this)">Kimi</button>
+      </div>
+
+      <div class="model-detail">
+        <label>API Key</label>
+        <div class="key-row">
+          <input type="password" id="apiKey" placeholder="输入 API Key..." />
+          <button class="icon-btn" onclick="toggleKey()">👁</button>
+          <button class="icon-btn" onclick="saveKey()" title="保存到本地">💾</button>
+          <button class="icon-btn" onclick="clearKey()" title="清除本地Key">🗑</button>
+        </div>
+        <div style="margin-top:5px;font-size:11px;color:#22a45d;display:none" id="keySavedTip">✅ 本地已存</div>
+        <label>模型版本</label>
+        <select id="modelSelect"></select>
+        <div id="baseUrlRow" style="display:none">
+          <label>Base URL（可选，留空用默认）</label>
+          <input type="text" id="baseUrl" placeholder="" />
+        </div>
+      </div>
+    </div>
+
+    <!-- App Info -->
+    <div class="panel">
+      <h2>📱 App Info</h2>
+      <label>商店名 Store Name <span style="color:#d93025">*</span></label>
+      <input type="text" id="storeName" placeholder="e.g. Marble Away" />
+      <label>游戏类型 Genre</label>
+      <input type="text" id="genre" placeholder="e.g. Color Sort Puzzle" />
+      <label>核心玩法 Core Gameplay</label>
+      <textarea id="gameplay" placeholder="e.g. 拖拽色块归类，关卡闯关，无时间限制..."></textarea>
+      <label>目标受众 Target Audience</label>
+      <input type="text" id="audience" placeholder="e.g. 休闲玩家，女性用户，25-45岁" />
+      <label>必含词 Required Keywords</label>
+      <input type="text" id="required" placeholder="逗号分隔，e.g. puzzle,color,sort" />
+    </div>
+
+    <!-- Competitor Data -->
+    <div class="panel">
+      <h2>📊 竞品数据</h2>
+      <label>关键词（含搜索指数）</label>
+      <textarea id="compData" style="min-height:110px" placeholder="每行一个，格式：词,指数&#10;color sort puzzle,72&#10;block puzzle,68&#10;brain game,55"></textarea>
+      <p style="font-size:11px;color:#aaa;margin-top:5px;">* 关键词字段只使用此处提供的词，按指数排优先级</p>
+    </div>
+
+    <!-- Markets -->
+    <div class="panel">
+      <h2>🌍 Markets</h2>
+      <div class="market-grid">
+        <button class="market-btn active" data-market="US" onclick="toggleMarket(this)"><span class="flag">🇺🇸</span>US (EN)</button>
+        <button class="market-btn active" data-market="CN" onclick="toggleMarket(this)"><span class="flag">🇨🇳</span>CN (ZH)</button>
+        <button class="market-btn active" data-market="JP" onclick="toggleMarket(this)"><span class="flag">🇯🇵</span>JP (JA)</button>
+        <button class="market-btn active" data-market="KR" onclick="toggleMarket(this)"><span class="flag">🇰🇷</span>KR (KO)</button>
+      </div>
+    </div>
+
+    <button class="generate-btn" id="genBtn" onclick="generate()">⚡ Generate Metadata</button>
+  </div>
+
+  <!-- Output -->
+  <div class="output-area" id="output">
+    <div class="output-placeholder">填写左侧信息后点击 Generate ✨</div>
+  </div>
+</div>
+
+<script>
+// ── Provider Config ──────────────────────────────────────────────
+const PROVIDERS = {
+  claude: {
+    name: 'Claude',
+    models: ['claude-sonnet-4-20250514', 'claude-opus-4-5', 'claude-haiku-4-5-20251001'],
+    defaultBase: 'https://api.anthropic.com/v1',
+    showBaseUrl: false,
+    buildHeaders: (key) => ({ 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }),
+    buildBody: (model, systemPrompt, userPrompt) => JSON.stringify({ model, max_tokens: 400, system: systemPrompt, messages: [{ role: 'user', content: userPrompt }] }),
+    extractText: (data) => data.content.map(b => b.text || '').join('')
+  },
+  openai: {
+    name: 'OpenAI',
+    models: ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo'],
+    defaultBase: 'https://api.openai.com/v1',
+    showBaseUrl: false,
+    buildHeaders: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    buildBody: (model, systemPrompt, userPrompt) => JSON.stringify({ model, max_tokens: 400, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+    extractText: (data) => data.choices[0].message.content
+  },
+  deepseek: {
+    name: 'DeepSeek',
+    models: ['deepseek-chat', 'deepseek-reasoner'],
+    defaultBase: 'https://api.deepseek.com/v1',
+    showBaseUrl: true,
+    buildHeaders: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    buildBody: (model, systemPrompt, userPrompt) => JSON.stringify({ model, max_tokens: 400, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+    extractText: (data) => data.choices[0].message.content
+  },
+  gemini: {
+    name: 'Gemini',
+    models: ['gemini-2.0-flash', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+    defaultBase: 'https://generativelanguage.googleapis.com/v1beta',
+    showBaseUrl: false,
+    buildHeaders: (key) => ({ 'Content-Type': 'application/json' }),
+    buildBody: (model, systemPrompt, userPrompt, key) => JSON.stringify({ system_instruction: { parts: [{ text: systemPrompt }] }, contents: [{ role: 'user', parts: [{ text: userPrompt }] }], generationConfig: { maxOutputTokens: 400 } }),
+    buildUrl: (base, model, key) => `${base}/models/${model}:generateContent?key=${key}`,
+    extractText: (data) => data.candidates[0].content.parts[0].text
+  },
+  kimi: {
+    name: 'Kimi',
+    models: ['moonshot-v1-8k', 'moonshot-v1-32k', 'moonshot-v1-128k'],
+    defaultBase: 'https://api.moonshot.cn/v1',
+    showBaseUrl: true,
+    buildHeaders: (key) => ({ 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` }),
+    buildBody: (model, systemPrompt, userPrompt) => JSON.stringify({ model, max_tokens: 400, messages: [{ role: 'system', content: systemPrompt }, { role: 'user', content: userPrompt }] }),
+    extractText: (data) => data.choices[0].message.content
+  }
+};
+
+// ── Market Prompts ───────────────────────────────────────────────
+const MARKET_RULES = {
+  US: (name) => `You are a professional App Store game ASO copywriter for the US market.
+STRICT RULES:
+1. The store name "${name}" MUST appear at the very beginning of the title. Do not change it.
+2. Any required keywords provided must appear in title or subtitle.
+3. Title ≤ 30 characters, Subtitle ≤ 30 characters, Keywords field ≤ 100 characters.
+4. Keywords field must NOT repeat any word already used in title or subtitle (word-level dedup).
+5. Keywords field may ONLY use words from the competitor data provided. Do not invent new words.
+6. Break up competitor app names and recombine — do not copy full competitor names.
+7. Prioritize words with higher search index/popularity scores.
+8. If remaining characters are insufficient for the next word, leave blank — do not invent filler.
+Write in English.`,
+  CN: (name) => `你是专业的App Store游戏ASO关键词写手，负责中国区（CN）元数据。
+严格规则：
+1. 商店名"${name}"必须固定出现在主标题开头，不可修改。
+2. 指定必含词必须出现在主标题或副标题中。
+3. 主标题 ≤30字符，副标题 ≤30字符，关键词字段 ≤100字符。
+4. 关键词字段不得重复主标题和副标题中已有的任何单词/词语。
+5. 关键词字段只能使用竞品数据中提供的词，不得自行添加。
+6. 竞品名拆词重组，不直接照搬完整竞品名。
+7. 优先使用搜索指数更高的词。
+8. 字符不足以填入下一个词时，宁可留空，不造词。
+用简体中文写作。`,
+  JP: (name) => `あなたはApp StoreゲームASO専門ライターです（日本市場）。
+厳格なルール：
+1. ストア名"${name}"は必ずタイトルの先頭に固定配置。変更不可。
+2. 指定必須キーワードはタイトルまたはサブタイトルに含めること。
+3. タイトル ≤30文字、サブタイトル ≤30文字、キーワード欄 ≤100文字。
+4. キーワード欄はタイトル・サブタイトルで使用した単語を繰り返さないこと。
+5. キーワード欄は提供した競合データの単語のみ使用。新規造語禁止。
+6. 競合アプリ名は分解・再構成して使用、そのまま転用しないこと。
+7. 検索指数の高い単語を優先。
+8. 文字数が足りない場合は空白のまま。
+日本語で記述。`,
+  KR: (name) => `당신은 App Store 게임 ASO 전문 카피라이터입니다（한국 시장）.
+엄격한 규칙:
+1. 스토어명"${name}"은 반드시 제목 맨 앞에 고정 배치. 변경 불가.
+2. 지정된 필수 키워드는 제목 또는 부제목에 반드시 포함.
+3. 제목 ≤30자, 부제목 ≤30자, 키워드 필드 ≤100자.
+4. 키워드 필드에는 제목/부제목에서 사용된 단어 반복 금지.
+5. 키워드 필드는 경쟁사 데이터의 단어만 사용. 새로운 단어 생성 금지.
+6. 경쟁사 앱 이름은 분해·재조합, 전체 이름 그대로 사용 금지.
+7. 검색 지수가 높은 단어 우선.
+8. 글자 수 부족 시 공백으로 두기.
+한국어로 작성.`
+};
+
+const SYSTEM_PROMPT = 'You are an expert ASO copywriter. Always respond with valid JSON only — no markdown fences, no explanation. Output must be: {"title":"...","subtitle":"...","keywords":"..."}';
+
+let currentProvider = 'claude';
+let results = {};
+
+// ── Init ─────────────────────────────────────────────────────────
+function switchProvider(btn) {
+  document.querySelectorAll('.model-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentProvider = btn.dataset.provider;
+  updateModelSelect();
+  loadKey();
+}
+
+function updateModelSelect() {
+  const cfg = PROVIDERS[currentProvider];
+  const sel = document.getElementById('modelSelect');
+  sel.innerHTML = cfg.models.map(m => `<option value="${m}">${m}</option>`).join('');
+  const baseRow = document.getElementById('baseUrlRow');
+  const baseInput = document.getElementById('baseUrl');
+  if (cfg.showBaseUrl) {
+    baseRow.style.display = 'block';
+    baseInput.placeholder = cfg.defaultBase;
+    baseInput.value = '';
+  } else {
+    baseRow.style.display = 'none';
+  }
+}
+
+function toggleKey() {
+  const inp = document.getElementById('apiKey');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function saveKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  const provider = currentProvider;
+  if (key) {
+    localStorage.setItem(`aso_key_${provider}`, key);
+    showKeySaved();
+  }
+}
+
+function loadKey() {
+  const saved = localStorage.getItem(`aso_key_${currentProvider}`);
+  document.getElementById('apiKey').value = saved || '';
+  document.getElementById('keySavedTip').style.display = saved ? 'inline' : 'none';
+}
+
+function clearKey() {
+  localStorage.removeItem(`aso_key_${currentProvider}`);
+  document.getElementById('apiKey').value = '';
+  document.getElementById('keySavedTip').style.display = 'none';
+}
+
+function showKeySaved() {
+  const tip = document.getElementById('keySavedTip');
+  tip.style.display = 'inline';
+  tip.textContent = '✅ 已保存';
+  setTimeout(() => tip.textContent = '✅ 本地已存', 1500);
+}
+
+function toggleMarket(btn) { btn.classList.toggle('active'); }
+
+// ── Call API ─────────────────────────────────────────────────────
+async function callModel(systemPrompt, userPrompt) {
+  const key = document.getElementById('apiKey').value.trim();
+  const model = document.getElementById('modelSelect').value;
+  const customBase = document.getElementById('baseUrl').value.trim();
+  const cfg = PROVIDERS[currentProvider];
+  const base = customBase || cfg.defaultBase;
+
+  let url;
+  if (cfg.buildUrl) {
+    url = cfg.buildUrl(base, model, key);
+  } else {
+    url = `${base}/messages`;
+    if (currentProvider === 'openai' || currentProvider === 'deepseek' || currentProvider === 'kimi') url = `${base}/chat/completions`;
+  }
+
+  const headers = cfg.buildHeaders(key);
+  const body = cfg.buildBody(model, systemPrompt, userPrompt, key);
+
+  const resp = await fetch(url, { method: 'POST', headers, body });
+  if (!resp.ok) {
+    const err = await resp.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `HTTP ${resp.status}`);
+  }
+  const data = await resp.json();
+  return cfg.extractText(data);
+}
+
+// ── Generate ─────────────────────────────────────────────────────
+async function generate() {
+  const key = document.getElementById('apiKey').value.trim();
+  const storeName = document.getElementById('storeName').value.trim();
+  if (!key) { alert('请输入 API Key'); return; }
+  if (!storeName) { alert('请输入商店名 (Store Name)'); return; }
+
+  const activeMarkets = [...document.querySelectorAll('.market-btn.active')].map(b => b.dataset.market);
+  if (!activeMarkets.length) { alert('请至少选择一个市场'); return; }
+
+  const btn = document.getElementById('genBtn');
+  btn.disabled = true; btn.textContent = '⏳ Generating...';
+  results = {};
+
+  const outputEl = document.getElementById('output');
+  outputEl.innerHTML = `<div class="loading"><div class="spinner"></div>正在调用 ${PROVIDERS[currentProvider].name} 生成 ${activeMarkets.join(', ')} 元数据...</div>`;
+
+  const genre = document.getElementById('genre').value.trim();
+  const gameplay = document.getElementById('gameplay').value.trim();
+  const audience = document.getElementById('audience').value.trim();
+  const required = document.getElementById('required').value.trim();
+  const compData = document.getElementById('compData').value.trim();
+
+  const appInfo = `Store Name: ${storeName}
+Genre: ${genre}
+Core Gameplay: ${gameplay}
+Target Audience: ${audience}
+Required Keywords (must appear in title or subtitle): ${required || 'none'}
+Competitor keyword data (keyword, search index):
+${compData || '(none provided)'}`;
+
+  const promises = activeMarkets.map(async (market) => {
+    const rules = MARKET_RULES[market](storeName);
+    const userPrompt = `${rules}\n\nApp Information:\n${appInfo}\n\nReturn ONLY a JSON object: {"title":"...","subtitle":"...","keywords":"..."}`;
+    try {
+      const text = await callModel(SYSTEM_PROMPT, userPrompt);
+      const clean = text.replace(/```json|```/g, '').trim();
+      return [market, JSON.parse(clean)];
+    } catch(e) {
+      return [market, { error: e.message }];
+    }
+  });
+
+  const all = await Promise.allSettled(promises);
+  all.forEach(r => {
+    if (r.status === 'fulfilled') results[r.value[0]] = r.value[1];
+  });
+
+  renderResults(activeMarkets);
+  btn.disabled = false; btn.textContent = '⚡ Generate Metadata';
+}
+
+// ── Render ───────────────────────────────────────────────────────
+function charCount(s) { return s ? [...s].length : 0; }
+function charBadge(n, lim) {
+  const cls = n > lim ? 'char-over' : n >= lim * 0.88 ? 'char-warn' : 'char-ok';
+  return `<span class="char-badge ${cls}">${n}/${lim}</span>`;
+}
+
+const MARKET_META = {
+  US: { flag: '🇺🇸', label: 'US (English)' },
+  CN: { flag: '🇨🇳', label: 'CN (中文)' },
+  JP: { flag: '🇯🇵', label: 'JP (日本語)' },
+  KR: { flag: '🇰🇷', label: 'KR (한국어)' }
+};
+
+function renderResults(markets) {
+  const el = document.getElementById('output');
+  el.innerHTML = '';
+  if (Object.keys(results).length > 1) {
+    el.innerHTML = `<div class="export-bar"><button class="export-btn" onclick="exportCSV()">⬇ CSV</button><button class="export-btn" onclick="exportJSON()">⬇ JSON</button></div>`;
+  }
+  markets.forEach(m => {
+    const meta = MARKET_META[m];
+    const d = results[m];
+    const card = document.createElement('div');
+    card.className = `market-card market-${m}`;
+    const modelTag = `<span class="model-tag">${PROVIDERS[currentProvider].name} · ${document.getElementById('modelSelect').value}</span>`;
+    if (d.error) {
+      card.innerHTML = `<div class="market-card-header">${meta.flag} ${meta.label} ${modelTag}</div><div class="market-card-body"><div class="error-msg">❌ ${d.error}</div></div>`;
+    } else {
+      const tc = charCount(d.title), sc = charCount(d.subtitle), kc = charCount(d.keywords);
+      card.innerHTML = `
+        <div class="market-card-header">${meta.flag} ${meta.label} ${modelTag}</div>
+        <div class="market-card-body">
+          ${fRow('TITLE', d.title, tc, 30, m, 'title')}
+          ${fRow('SUBTITLE', d.subtitle, sc, 30, m, 'subtitle')}
+          ${fRow('KEYWORDS', d.keywords, kc, 100, m, 'keywords')}
+        </div>`;
+    }
+    el.appendChild(card);
+  });
+}
+
+function fRow(label, val, n, lim, m, field) {
+  return `<div class="field-row">
+    <div class="field-label">${label} ${charBadge(n, lim)}</div>
+    <div class="field-value" id="v-${m}-${field}">${val || '—'}</div>
+    <button class="copy-btn" onclick="cp('${m}','${field}')">📋 Copy</button>
+  </div>`;
+}
+
+function cp(m, f) {
+  const el = document.getElementById(`v-${m}-${f}`);
+  navigator.clipboard.writeText(el.textContent).then(() => {
+    const b = el.nextElementSibling; b.textContent = '✅ Copied!';
+    setTimeout(() => b.textContent = '📋 Copy', 1500);
+  });
+}
+
+function exportCSV() {
+  const rows = [['Market', 'Title', 'Subtitle', 'Keywords', 'Model']];
+  const model = document.getElementById('modelSelect').value;
+  Object.entries(results).forEach(([m, d]) => {
+    if (!d.error) rows.push([m, d.title||'', d.subtitle||'', d.keywords||'', model]);
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  dl('aso_metadata.csv', csv, 'text/csv');
+}
+
+function exportJSON() { dl('aso_metadata.json', JSON.stringify(results, null, 2), 'application/json'); }
+
+function dl(name, content, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content], { type }));
+  a.download = name; a.click();
+}
+
+// Init
+updateModelSelect();
+loadKey();
+</script>
+</body>
+</html>
