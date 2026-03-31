@@ -249,11 +249,12 @@ const PROVIDERS = {
 // ── Market Prompts ───────────────────────────────────────────────
 const COMMON_RULES = (name) => `
 ## Field Specs (Hard Limits)
-- Title: ≤30 characters. Must be naturally readable like a real product name. Store name "${name}" fixed at the start, followed by a colon or dash, then 2–3 core keywords.
-  ✅ "${name}: Color Sort Puzzle 3D"   ❌ "${name} Color Sort Puzzle Brain" (keyword stuffing)
+- Title: ≤30 characters. Store name "${name}" fixed at the start, followed by a colon or dash. After that, pack in as many HIGH-index keywords as possible while keeping it naturally readable. Target 26–30 characters — leaving too many characters unused is a mistake.
+  ✅ "${name}: Color Sort Puzzle 3D"  (28/30)   ❌ "${name}: Jewel Quest" (too short, wastes space)
   Title Required Keywords (if provided) MUST all appear in Title — no exceptions.
-- Subtitle: ≤30 characters. Supplement Title with scene/benefit/audience. Must NOT repeat any word root already in Title.
+- Subtitle: ≤30 characters. Must NOT repeat any word root already in Title. Pack in high-index keywords not covered by Title, forming a natural short phrase or list. Target 26–30 characters — do not leave the subtitle short.
   Subtitle Required Keywords (if provided) MUST all appear in Subtitle — no exceptions.
+- CHARACTER UTILIZATION RULE: Both Title and Subtitle should aim for 26–30 characters. A result under 24 characters in either field is considered a failure unless it is genuinely impossible to add more keywords within the constraints.
 - Keywords: ≤100 characters. Comma-separated, NO space after comma.
 
 ## Apple Indexing Logic
